@@ -31,27 +31,26 @@ async function download(count = 0) {
         fs.mkdirSync(downloadDir);
     }
     if (url.includes("http"))
-    await axios.get(url).then(async ({data}) => {
-        
+    await axios.get(url).then(async (response) => {
+        console.log(`HTTP Status: ${response.status}`);
+        const { data } = response;
         const dom = new JSDOM(data);
         const window = dom.window;
         const document = window.document;
         const linkArray = [].slice.call(document.getElementsByClassName("collectionItemDetails")).map(a => a.children[0]);
-        const namedUrlArray = linkArray.map(link => [link.href, link.children[0].textContent])
+        const namedUrlArray = linkArray.map(link => [link.href, link.children[0].textContent]);
         
-        const collectionName = document.getElementsByClassName("workshopItemTitle")[0].textContent;
+        const collectionTitleElement = document.getElementsByClassName("workshopItemTitle")[0];
+        const collectionName = collectionTitleElement ? collectionTitleElement.textContent : "Unnamed Collection";
         const collectionDir = `${downloadDir}/${validName(collectionName)}`;
 
         if (!fs.existsSync(collectionDir)) {
             fs.mkdirSync(collectionDir)
         }
 
-        const appId = last(
-            document.getElementsByClassName('breadcrumbs')[0]
-            .getElementsByTagName('a')[0]
-            .href.split('/')
-        );
-        
+        const breadcrumbsElement = document.getElementsByClassName('breadcrumbs')[0];
+        const appId = breadcrumbsElement ? last(breadcrumbsElement.getElementsByTagName('a')[0].href.split('/')) : "unknown";
+
         console.log(`downloading ${collectionName}`);
         
         for (let idx = 0; idx < namedUrlArray.length; idx ++) {
@@ -71,9 +70,6 @@ async function download(count = 0) {
 
                     const subDownloadButton = document.getElementById("steamdownload");
 
-                    
-                    // const filePath = `${collectionDir}/${fileName}`
-                    
                     console.log(`    ${idx}. ${packageName}`);
                     if (subDownloadButton) {
                         let response = await axios.post("http://steamworkshop.download/online/steamonline.php", `item=${workshopId}&app=${appId}`);
@@ -95,7 +91,7 @@ async function download(count = 0) {
         
 
     }).catch(err => {
-        console.log(url);
+        console.log(`Error al acceder a la URL: ${url}`);
         console.log(err);
     });
     await download(count + 1);
